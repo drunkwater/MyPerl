@@ -55,12 +55,14 @@ sub get_abs_path
 use Getopt::Long;
 Getopt::Long::Configure("no_ignore_case");
 my $version=0;
-my $httpIp="172.17.179.200";
-my $httpUser="admin";
-my $httpPassword="1234";
-my $inFilename="";
+my $httpIp='172.17.179.200';
+my $httpUser='admin';
+my $httpPassword='1234';
+my $inFilename='';
 my $verbose=0;
 my $help=0;
+my $isNonLync=0;
+
 sub usage {
   print <<EndOfUsage;
   Usage: $0 [options] [files]
@@ -78,6 +80,7 @@ my $http_host_ip = '';
 my $http_host_port = '';
 my $url_host_port = '';
 my $http_url = '';
+my $http_url_no_port = '';
 
 
 #------------------------------------------------------------------------
@@ -90,6 +93,7 @@ sub main()
 	'user=s' => \$httpUser,
 	'password=s' => \$httpPassword,
 	'fimage=s' => \$inFilename,
+	'nonlync' => \$isNonLync,
 	'verbose'	=> \$verbose,
 	'version'	=> \$version,
 	'help|?' => \$help ))
@@ -139,8 +143,21 @@ sub main()
 	$http_host_port = '80';
 	$url_host_port = $http_host_ip . ':' . $http_host_port;
 	$http_url = 'http://' . $http_host_ip . ':' . $http_host_port;
+	$http_url_no_port = 'http://' . $http_host_ip;
 
-	do_http_basic_auth();
+	# hey! it's weak HTTP Server
+	if ($isNonLync)
+	{
+		print "upgrade nonLync image!\n";
+
+		do_http_basic_auth();
+	}
+	else
+	{
+		do_http_cookie_pair();
+	}
+
+
 
 	my $elapsed_time = time()- $^T;
 	# $^T just like $start_time=time() put it very beginn of perl script.
@@ -151,9 +168,12 @@ sub main()
 ### http
 ################################################################################
 
+use MIME::Base64;
+
 use LWP;
 use LWP::Simple;
 use LWP::UserAgent;
+use LWP::ConnCache;
 use HTTP::Cookies;
 use HTTP::Headers;
 use HTTP::Response;
@@ -162,6 +182,7 @@ use URI::Escape;
 use URI::URL;
 use HTTP::Request::Common;
 
+#my $ua = LWP::UserAgent->new(keep_alive => 1);
 my $ua = LWP::UserAgent->new;
 
 
@@ -193,6 +214,7 @@ sub do_http_basic_auth
 	{
 		die "HTTP Basic Authentication failed!\n";
 	}
+
 
 	$request = POST $url,
 	Content_Type    => [ 'application/x-www-form-urlencoded' ],
@@ -233,6 +255,7 @@ sub do_http_basic_auth
 	$data .
 	"$CRLF--$boundary--$CRLF";
 
+
 	$url = $http_url. '/upload.cgi';
 	$request = POST $url,
 	Content_Type    => [ 'multipart/form-data; boundary=' . $boundary ],
@@ -256,6 +279,216 @@ sub do_http_basic_auth
 
 	return 0;
 }
+
+use LWP::Protocol::http qw( );
+
+sub do_http_cookie_pair
+{
+	# User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36
+	# sanity check
+	my ($url, $request, $response) = ();
+
+	#my $UserAgent = 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36';
+	#$ua->agent( $UserAgent );
+
+
+	$url = $http_url . '/mainform.cgi?go=mainframe.htm';
+	$request = GET $url,
+		Referer         => [ $http_url . '/mainform.cgi/login_redirect.htm' ],
+		Accept          => [ 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8' ],
+		Connection      => [ 'keep-alive' ],
+		Cache_Control   => [ 'max-age=0' ],
+		Accept_Encoding => [ 'gzip, deflate' ],
+		Accept_Language => [ 'zh-CN,zh;q=0.9' ],
+		Upgrade_Insecure_Requests => [1]
+	;
+	$response = $ua->request($request);
+	if ($response->is_success)
+	{
+		#print $response->content, "\r\n";
+		print "GET $url OK!\n";
+	}
+	else
+	{
+		die "GET $url failed!\n";
+	}
+
+
+
+	$url = $http_url . '/mainform.cgi/login_redirect.htm';
+	$request = GET $url,
+		Referer         => [ $http_url . '/mainform.cgi/login_redirect.htm' ],
+		Accept          => [ 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8' ],
+		Connection      => [ 'keep-alive' ],
+		Cache_Control   => [ 'max-age=0' ],
+		Accept_Encoding => [ 'gzip, deflate' ],
+		Accept_Language => [ 'zh-CN,zh;q=0.9' ],
+		Upgrade_Insecure_Requests => [1]
+	;
+	$request->header('Cookie' => 'session=');
+	$response = $ua->request($request);
+	if ($response->is_success)
+	{
+		#print $response->content, "\r\n";
+		print "GET $url OK!\n";
+	}
+	else
+	{
+		die "GET $url failed!\n";
+	}
+
+
+	$url = $http_url . '/login.cgi';
+	$request = GET $url,
+		Referer         => [ $http_url . '/mainform.cgi/login_redirect.htm' ],
+		Accept          => [ 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8' ],
+		Connection      => [ 'keep-alive' ],
+		Cache_Control   => [ 'max-age=0' ],
+		Accept_Encoding => [ 'gzip, deflate' ],
+		Accept_Language => [ 'zh-CN,zh;q=0.9' ],
+		Upgrade_Insecure_Requests => [1]
+	;
+	$request->header('Cookie' => 'session=');
+	$response = $ua->request($request);
+	if ($response->is_success)
+	{
+		#print $response->content, "\r\n";
+		print "GET $url OK!\n";
+	}
+	else
+	{
+		die "GET $url failed!\n";
+	}
+
+
+	my $SetCookie = '';
+	#@LWP::Protocol::http::EXTRA_SOCK_OPTS = (  SendTE => 0  );
+
+	my $cookie_jar = HTTP::Cookies->new(
+		file => get_abs_path() . "/cookies.txt",
+		autosave => 1,
+		ignore_discard => 1,
+		hide_cookie2 => 1
+	);
+	#it's not bug, famous common feature!
+	my $b64 = encode_base64($httpPassword);
+	$b64 =~ s/[\r\n]+//g;
+	$url = $http_url_no_port . '/login.cgi';
+	$request = POST $url,
+		Connection          => [ 'keep-alive' ],
+		Cache_Control       => [ 'max-age=0' ],
+		Upgrade_Insecure_Requests => [1],
+		Content_Type        => [ 'application/x-www-form-urlencoded' ],
+		Accept              => [ 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8' ],
+		Referer             => [ $url ],
+		Accept_Encoding     => [ 'gzip, deflate' ],
+		Accept_Language     => [ 'zh-CN,zh;q=0.9' ],
+		Content             => [ 'user' => $httpUser, 'psw' => $b64 ],
+	;
+	$ua->cookie_jar($cookie_jar);
+	$response = $ua->request($request);
+	if($response->is_success)
+	{
+		# check output
+		#print $response->content;
+		print "POST $url OK!\n";
+		print "Set-Cookie:", $response->header('Set-Cookie'), "\n";
+		$SetCookie = $response->header('Set-Cookie');
+		if ('' eq $SetCookie)
+		{
+			die "without Set-Cookie in Server Header!\n";
+		}
+		else
+		{
+			$SetCookie =~ /session=(.*)\;\ path\=\//;
+			$SetCookie = $1;
+			print "you got $SetCookie\n";
+		}
+		#print $response->headers()->as_string;
+	}
+	else
+	{
+		die "POST $url failed!\n";
+	}
+
+
+
+	$url = $http_url . '/mainform.cgi/Manu_Firmware_Upgrade.htm';
+	$request = GET $url;
+	#$request->header('Cookie' => ('session=' . $SetCookie) );
+	$response = $ua->request($request);
+	if ($response->is_success)
+	{
+		#print $response->content, "\r\n";
+		print "GET $url OK!\n";
+	}
+	else
+	{
+		die "GET $url failed!\n";
+	}
+
+
+
+	$request = POST $url,
+	Content_Type    => [ 'application/x-www-form-urlencoded' ],
+	Content         => [ 'UPGRADESHOW' => "1" ];
+	$response = $ua->request($request);
+	if($response->is_success)
+	{
+		# check output
+		#print $response->content;
+		print "POST $url OK!\n";
+	}
+	else
+	{
+		die "POST $url failed!\n";
+	}
+
+	my $fh = open_filehandle_for_read($inFilename);
+	binmode($fh);
+	#ugly data
+	my $data = '';
+	while(<$fh>)
+	{
+		$data .= $_;
+	}
+	close($fh);
+
+	my ($vol, $dirs, $file) = File::Spec->splitpath($inFilename);
+	#print ("file ", $file, " in Dir ", $dirs,"\n"x2);
+	my $boundary = '----WebKitFormBoundary' . boundary(4);
+	print $boundary, "\n"x2;
+
+	my $content = "--$boundary$CRLF" .
+	qq(Content-Disposition: form-data; name="localupgrade"$CRLF$CRLF) . "20" .
+	"$CRLF--$boundary$CRLF" .
+	qq(Content-Disposition: form-data; name="upname"; filename="$file"$CRLF) .
+	qq(Content-Type: application/octet-stream$CRLF$CRLF) .
+	$data .
+	"$CRLF--$boundary--$CRLF";
+
+	$url = $http_url. '/upload.cgi';
+	$request = POST $url,
+	Content_Type    => [ 'multipart/form-data; boundary=' . $boundary ],
+	Content         => $content
+	;
+	$request->header('Content-Type' => 'multipart/form-data; boundary=' . $boundary);
+	$response = $ua->request($request);
+	if($response->is_success)
+	{
+		# check output
+		#print $response->content;
+
+		print "upload $url OK!\n";
+	}
+	else
+	{
+		die "upload $url failed!\n";
+	}
+
+	return 0;
+}
+
 
 main();
 exit 0;
