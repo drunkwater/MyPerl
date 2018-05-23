@@ -4,7 +4,7 @@
 # @author             :  Copyright (C) Church.Zhong
 # @date               :  Tue May 15 10:01:15 HKT 2018
 # @function           :  upgrade IP phone binary image file
-# @see                :  
+# @see                :  https://github.com/drunkwater/MyPerl
 # @require            :  
 
 # https://en.wikipedia.org/wiki/Comma-separated_values
@@ -70,6 +70,7 @@ sub usage {
   --user=USER          Set http user to USER
   --password=PASS      Set http password to PASS
   --fimage=filename    Given binary image file
+  --nonlync            nonlync or SFB branch
   --help               Help information
   --version            Version information
 EndOfUsage
@@ -154,6 +155,7 @@ sub main()
 	}
 	else
 	{
+		print "upgrade SFB/Lync image!\n";
 		do_http_cookie_pair();
 	}
 
@@ -365,7 +367,7 @@ sub do_http_cookie_pair
 	#@LWP::Protocol::http::EXTRA_SOCK_OPTS = (  SendTE => 0  );
 
 	my $cookie_jar = HTTP::Cookies->new(
-		file => get_abs_path() . "/cookies.txt",
+		file => "cookies.txt",
 		autosave => 1,
 		ignore_discard => 1,
 		hide_cookie2 => 1
@@ -373,7 +375,7 @@ sub do_http_cookie_pair
 	#it's not bug, famous common feature!
 	my $b64 = encode_base64($httpPassword);
 	$b64 =~ s/[\r\n]+//g;
-	$url = $http_url_no_port . '/login.cgi';
+	$url = $http_url . '/login.cgi';
 	$request = POST $url,
 		Connection          => [ 'keep-alive' ],
 		Cache_Control       => [ 'max-age=0' ],
@@ -396,13 +398,13 @@ sub do_http_cookie_pair
 		$SetCookie = $response->header('Set-Cookie');
 		if ('' eq $SetCookie)
 		{
-			die "without Set-Cookie in Server Header!\n";
+			die "I can't find 'Set-Cookie' in Server Header!\n";
 		}
 		else
 		{
 			$SetCookie =~ /session=(.*)\;\ path\=\//;
 			$SetCookie = $1;
-			print "you got $SetCookie\n";
+			print "Dump shiny Set-Cookie: $SetCookie\n";
 		}
 		#print $response->headers()->as_string;
 	}
