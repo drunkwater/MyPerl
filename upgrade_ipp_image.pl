@@ -5,7 +5,7 @@
 # @date               :  Tue May 15 10:01:15 HKT 2018
 # @function           :  upgrade IP phone binary image file
 # @see                :  https://github.com/drunkwater/MyPerl
-# @require            :  
+# @require            :  Perl 5.24.2
 
 # https://en.wikipedia.org/wiki/Comma-separated_values
 

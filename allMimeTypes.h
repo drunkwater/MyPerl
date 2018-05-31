@@ -1,0 +1,1 @@
+#define MIME_TYPE_ARRAY_SIZE (2000)
