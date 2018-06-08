@@ -51,6 +51,9 @@ sub get_abs_path
 	return $dirs;
 }
 
+# https://stackoverflow.com/questions/2215049/how-do-i-enable-ipv6-support-in-lwp
+use Net::INET6Glue::INET_is_INET6;
+use Net::IP;
 
 use Getopt::Long;
 Getopt::Long::Configure("no_ignore_case");
@@ -140,7 +143,17 @@ sub main()
 	print "$httpIp, $httpUser, $httpPassword, $inFilename \n";
 	my $dir = get_abs_path();
 
-	$http_host_ip = $httpIp;
+	# http://search.cpan.org/dist/Net-IP/IP.pm
+	my $ip = new Net::IP ($httpIp) or die (Net::IP::Error());
+	print "ip->version=", $ip->version(), "\n";
+	if (4 eq $ip->version())
+	{
+		$http_host_ip = $httpIp;
+	}
+	else
+	{
+		$http_host_ip = '[' . $httpIp . ']';
+	}
 	$http_host_port = '80';
 	$url_host_port = $http_host_ip . ':' . $http_host_port;
 	$http_url = 'http://' . $http_host_ip . ':' . $http_host_port;
@@ -368,7 +381,7 @@ sub do_http_cookie_pair
 
 	my $cookie_jar = HTTP::Cookies->new(
 		file => "cookies.txt",
-		autosave => 1,
+		autosave => 0,
 		ignore_discard => 1,
 		hide_cookie2 => 1
 	);
