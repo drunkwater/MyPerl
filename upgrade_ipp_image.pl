@@ -55,6 +55,15 @@ sub get_abs_path
 use Net::INET6Glue::INET_is_INET6;
 use Net::IP;
 
+# ppm install dmake
+# https://metacpan.org/pod/IO::Socket::INET6
+# https://www.perl.org/about/whitepapers/perl-ipv6.html
+# http://search.cpan.org/~jmehnle/Net-Address-IP-Local-0.1.2/lib/Net/Address/IP/Local.pm
+# https://metacpan.org/pod/Error @Shlomi Fish
+use Net::Address::IP::Local;
+
+
+
 use Getopt::Long;
 Getopt::Long::Configure("no_ignore_case");
 my $version=0;

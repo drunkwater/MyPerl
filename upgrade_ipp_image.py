@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 
 ########################################################################################
-# @filename           :  zweek_filled.py
+# @filename           :  upgrade_ipp_image.py
 # @author             :  Copyright (C) Church.Zhong
-# @date               :  2017-11-03
+# @date               :  Fri Jun  8 14:48:56 HKT 2018
 # @function           :  upgrade IP phone binary image file
 # @see                :  C:\Program Files\Python36\Lib\urllib
-# @require            :  python 3.6.2+
+# @require            :  python 3.6.5 works well
 # @style              :  https://google.github.io/styleguide/pyguide.html
 ########################################################################################
 import os
@@ -18,6 +18,7 @@ from datetime import datetime
 from random import randint
 
 import base64
+import ipaddress
 
 
 import urllib.request
@@ -226,8 +227,8 @@ def do_http_cookie_pair(ip, username, password, filename):
     try:
         with urllib.request.urlopen(req ) as f:
             pass
-            print('POST {0},{1},{2}'.format(url, f.status, f.reason))
-            print(f.info())
+            print('GET {0},{1},{2}'.format(url, f.status, f.reason))
+            #print(f.info())
             #page = f.read().decode(encoding='utf-8')
             response = True
     except urllib.error.HTTPError as e:
@@ -349,6 +350,17 @@ def work():
     print('password         = {!r}'.format(results.password))
     print('image_file       = {!r}'.format(results.image_file))
     print('nonLync          = {!r}'.format(results.nonLync))
+
+    ip = ipaddress.ip_address(results.ip_address)
+    if 4 == ip.version:
+        print ("Valid IPv4")
+    elif 6 == ip.version:
+        print ("Valid IPv6")
+        results.ip_address = '[{}]'.format(ip)
+    else:
+        print ("Invalid ipaddress " % ip)
+        return
+
     if True == results.nonLync:
         print ("upgrade nonLync image!\n")
         do_http_basic_auth(results.ip_address, results.username, results.password, results.image_file)
